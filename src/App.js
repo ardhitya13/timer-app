@@ -3,11 +3,11 @@ import Timer from "./Timer";
 import "./App.css";
 
 const THEMES = [
-  { type: "video", label: "Programer", src: "/coding.mp4" },
-  { type: "video", label: "Train", src: "/train.mp4" },
-  { type: "video", label: "Study", src: "/vidio1.mp4" },
-  { type: "video", label: "Mountain", src: "/mountain.mp4" }, // contoh tambahan
-  { type: "video", label: "Beach Sunset", src: "/beach_sunset.mp4" }     // contoh tambahan
+  { type: "video", label: "Programer", src: process.env.PUBLIC_URL + "/coding.mp4" },
+  { type: "video", label: "Train", src: process.env.PUBLIC_URL + "/train.mp4" },
+  { type: "video", label: "Study", src: process.env.PUBLIC_URL + "/vidio1.mp4" },
+  { type: "video", label: "Mountain", src: process.env.PUBLIC_URL + "/mountain.mp4" },
+  { type: "video", label: "Beach Sunset", src: process.env.PUBLIC_URL + "/beach_sunset.mp4" }
 ];
 
 export default function App() {

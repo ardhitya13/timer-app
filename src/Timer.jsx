@@ -13,35 +13,29 @@ export default function Timer() {
 
   const tickRef = useRef(null);
   const alarmRef = useRef(null);
-  const didFinishRef = useRef(false);         // pastikan finish cuma sekali
-  const notifRef = useRef(null);              // menyimpan object Notification
-  const notifTimeoutRef = useRef(null);       // menyimpan timeout id untuk notif
+  const didFinishRef = useRef(false);
+  const notifRef = useRef(null);
+  const notifTimeoutRef = useRef(null);
 
-  // minta izin notifikasi sekali saat mount
+  // Minta izin notifikasi saat mount
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
     return () => {
-      // cleanup saat unmount
       clearTimeout(notifTimeoutRef.current);
-      stopAlarm(); // juga menutup audio & notifikasi jika ada
+      stopAlarm();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // countdown loop
+  // Countdown loop
   useEffect(() => {
     if (!running || total <= 0) return;
 
     tickRef.current = setTimeout(() => {
       setTotal((t) => {
-        // ketika sudah sampai 0 atau 1, pastikan handleFinish hanya dipanggil sekali
         if (t <= 1) {
-          // panggil finish hanya jika belum pernah dipanggil
-          if (!didFinishRef.current) {
-            handleFinish();
-          }
+          if (!didFinishRef.current) handleFinish();
           return 0;
         }
         return t - 1;
@@ -51,14 +45,14 @@ export default function Timer() {
     return () => clearTimeout(tickRef.current);
   }, [running, total]);
 
-  // Set waktu dari input (reset flag finished)
+  // Set waktu dari input
   const handleSet = () => {
     const m = minStr === "" ? 0 : Math.max(0, Math.floor(Number(minStr) || 0));
     const sRaw = secStr === "" ? 0 : Math.floor(Number(secStr) || 0);
     const s = Math.min(59, Math.max(0, sRaw));
     setTotal(m * 60 + s);
     didFinishRef.current = false;
-    // clear any pending notif timeout (safety)
+
     if (notifTimeoutRef.current) {
       clearTimeout(notifTimeoutRef.current);
       notifTimeoutRef.current = null;
@@ -72,7 +66,6 @@ export default function Timer() {
   const handleStartPause = () => {
     if (total === 0 && !running) return;
 
-    // kalau dari pause -> start pertama kali (bukan resume), hitung usage
     if (!running && total > 0) {
       const newCount = usageCount + 1;
       setUsageCount(newCount);
@@ -88,19 +81,15 @@ export default function Timer() {
     setMinStr("");
     setSecStr("");
     didFinishRef.current = false;
-    // hentikan alarm & notifikasi
     stopAlarm();
   };
 
-  // panggil saat timer selesai — diproteksi oleh didFinishRef
   const handleFinish = () => {
-    // pastikan hanya sekali
     if (didFinishRef.current) return;
     didFinishRef.current = true;
 
     setRunning(false);
 
-    // stop any previous notif timeout / notif
     if (notifTimeoutRef.current) {
       clearTimeout(notifTimeoutRef.current);
       notifTimeoutRef.current = null;
@@ -110,26 +99,19 @@ export default function Timer() {
       notifRef.current = null;
     }
 
-    // play alarm (looping)
+    // Play alarm dengan PUBLIC_URL
     try {
-      alarmRef.current = new Audio("/timer.mp3");
+      alarmRef.current = new Audio(process.env.PUBLIC_URL + "/timer.mp3");
       alarmRef.current.loop = true;
-      // play may be blocked until user interaction — handle promise
-      alarmRef.current.play().catch(() => {
-        // autoplay mungkin diblokir; tapi kita tetap jadwalkan notifikasi fallback
-      });
-    } catch (e) {
-      // ignore
-    }
+      alarmRef.current.play().catch(() => {});
+    } catch {}
 
-    // tampilkan notifikasi setelah jeda (biar alarm terdengar dulu)
+    // Notifikasi setelah 3 detik
     notifTimeoutRef.current = setTimeout(() => {
       notifTimeoutRef.current = null;
 
-      // kalau Notification API tersedia & granted
       if ("Notification" in window && Notification.permission === "granted") {
         try {
-          // pastikan notif lama ditutup
           if (notifRef.current) {
             try { notifRef.current.close(); } catch {}
             notifRef.current = null;
@@ -137,33 +119,27 @@ export default function Timer() {
 
           notifRef.current = new Notification("⏰ Timer Selesai!", {
             body: "Waktunya sudah habis!",
-            icon: "/favicon.ico"
+            icon: process.env.PUBLIC_URL + "/favicon.ico"
           });
 
-          // klik notifikasi -> hentikan alarm & tutup notifikasi
           notifRef.current.onclick = () => {
             stopAlarm();
             try { notifRef.current.close(); } catch {}
             notifRef.current = null;
           };
-
-          // jika pengguna menutup notifikasi (close), juga hentikan alarm
           notifRef.current.onclose = () => {
             stopAlarm();
             notifRef.current = null;
           };
         } catch (e) {
-          // jika bikin Notification gagal, fallback ke alert
           alertAndStop();
         }
       } else {
-        // fallback jika permission tidak diberikan
         alertAndStop();
       }
-    }, 3000); // 3 detik jeda
+    }, 3000);
   };
 
-  // hentikan alarm + clear notif timeout + tutup notifikasi
   const stopAlarm = () => {
     if (alarmRef.current) {
       try {
@@ -185,12 +161,7 @@ export default function Timer() {
   };
 
   const alertAndStop = () => {
-    // tampilkan alert sinkron lalu hentikan alarm setelah user menutup alert
-    try {
-      alert("⏰ Timer selesai!");
-    } catch (e) {
-      // ignore
-    }
+    try { alert("⏰ Timer selesai!"); } catch {}
     stopAlarm();
   };
 
@@ -238,7 +209,6 @@ export default function Timer() {
         <button onClick={handleReset} className="pixel-btn red">Reset</button>
       </div>
 
-      {/* Statistik pemakaian */}
       <div style={{ marginTop: "10px", fontSize: "10px" }}>
         📊 Kamu sudah pakai timer ini <b>{usageCount}</b> kali
       </div>
